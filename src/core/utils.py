@@ -26,7 +26,6 @@ def read_data(file_path: str, header_length: int = 15) -> np.ndarray:
     
     return np.column_stack((time_data, amplitude_data))
 
-# TODO: fix study name
 def get_num_signals(path: Path) -> dict[str, int]:
     """
     Get the number of positive signal files for each study in the given path.

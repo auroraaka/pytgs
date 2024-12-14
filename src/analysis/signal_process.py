@@ -5,7 +5,7 @@ from scipy.signal import find_peaks
 
 from src.core.path import Paths
 from src.core.utils import read_data
-from src.core.plots import plot_signal_processed
+from src.core.plots import plot_signal_process
 
 
 PROMINENCE_FACTOR = 5
@@ -168,7 +168,7 @@ def find_start_time(signal: np.ndarray, grating_spacing: float, time_step: float
     return start_idx, start_time
 
 
-def process_signal(paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, heterodyne: str = 'di-homodyne', null_point: int = 2, plot: bool = False) -> Tuple[np.ndarray, float, int, float]:
+def process_signal(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, heterodyne: str = 'di-homodyne', null_point: int = 2, baseline_correction: dict = None) -> Tuple[np.ndarray, float, int, float]:
     """
     Process signals for analysis.
 
@@ -177,6 +177,7 @@ def process_signal(paths: Paths, file_idx: int, pos_file: str, neg_file: str, gr
     index and start time for fitting procedures.
 
     Parameters:
+        config (dict): configuration dictionary
         paths (Paths): paths to data, figures, and fit files
         file_idx (int): index of the positive signal file
         pos_file (str): positive signal file path
@@ -206,7 +207,11 @@ def process_signal(paths: Paths, file_idx: int, pos_file: str, neg_file: str, gr
         raise ValueError('Invalid heterodyne setting, must be "di-homodyne" or "mono-homodyne"')
     pos, neg = pos[:N], neg[:N]
 
-    # TODO: Add baseline bool functionality
+    if baseline_correction is not None and baseline_correction['enabled']:
+        pos_baseline = read_data(baseline_correction['pos'])[:N]
+        neg_baseline = read_data(baseline_correction['neg'])[:N]
+        pos[:, 1] -= pos_baseline[:, 1]
+        neg[:, 1] -= neg_baseline[:, 1]
 
     pos[:, 1] -= np.mean(pos[:INITIAL_SAMPLES, 1])
     neg[:, 1] -= np.mean(neg[:INITIAL_SAMPLES, 1])
@@ -231,7 +236,7 @@ def process_signal(paths: Paths, file_idx: int, pos_file: str, neg_file: str, gr
     max_time = signal[max_idx, 0]
     start_idx, start_time = find_start_time(signal[max_idx:], grating_spacing, time_step, null_point)
 
-    if plot:
-        plot_signal_processed(paths, file_idx, signal, max_time, start_time)
+    if config['plot']['signal_process']:
+        plot_signal_process(paths, file_idx, signal, max_time, start_time, config['plot']['settings']['num_points'])
 
     return signal, max_time, start_time, start_idx

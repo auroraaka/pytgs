@@ -8,7 +8,7 @@ from src.analysis.functions import lorentzian_function
 from src.core.plots import plot_fft_lorentzian
 
 
-def lorentzian_fit(paths: Paths, file_idx: int, fft: np.ndarray, signal_proportion: float = 1.0, frequency_bounds: List[Union[float, float]] = [0.1, 0.9], dc_filter_range: List[Union[int, int]] = [0, 12000], bimodal_fit: bool = False, plot: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+def lorentzian_fit(config: dict, paths: Paths, file_idx: int, fft: np.ndarray, signal_proportion: float = 1.0, frequency_bounds: List[Union[float, float]] = [0.1, 0.9], dc_filter_range: List[Union[int, int]] = [0, 12000], bimodal_fit: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
     """
     Fit Lorentzian peak to FFT signal.
 
@@ -17,6 +17,7 @@ def lorentzian_fit(paths: Paths, file_idx: int, fft: np.ndarray, signal_proporti
     based on a proportion of the peak height.
 
     Parameters:
+        config (dict): configuration dictionary
         paths (Paths): paths to data, figures, and fit files
         file_idx (int): file index
         fft (np.ndarray): FFT signal array of shape (N, 2) containing frequency and amplitude
@@ -101,7 +102,7 @@ def lorentzian_fit(paths: Paths, file_idx: int, fft: np.ndarray, signal_proporti
     noise_power = np.mean(fft_noise[:, 1] ** 2)
     snr = 10 * np.log10(signal_power / noise_power)
 
-    if plot:
+    if config['plot']['fft_lorentzian']:
         plot_fft_lorentzian(paths, file_idx, fft[neg_idx:pos_idx], frequency_bounds, lorentzian_function, popt)
 
     return saw_frequency, saw_frequency_error, fwhm, tau, snr, frequency_bounds, lorentzian_function, popt

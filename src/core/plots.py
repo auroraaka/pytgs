@@ -14,12 +14,11 @@ from src.core.path import Paths
 matplotlib.rcParams['font.family'] = 'Times New Roman'
 matplotlib.rcParams['font.sans-serif'] = ['Times New Roman']
 
-# TODO: automatically scale graph size
-NUM_POINTS = 1000
-
-def plot_tgs(paths, file_idx, signal, start_idx, functional_function, thermal_function, fit_params):
-    x_raw, y_raw = signal[:NUM_POINTS, 0], signal[:NUM_POINTS, 1]
-    x_fit = signal[start_idx:NUM_POINTS, 0]
+def plot_tgs(paths, file_idx, signal, start_idx, functional_function, thermal_function, fit_params, num_points=None):
+    if num_points is None:
+        num_points = len(signal)
+    x_raw, y_raw = signal[:num_points, 0], signal[:num_points, 1]
+    x_fit = signal[start_idx:num_points, 0]
 
     plt.figure(figsize=(10, 6))
     plt.plot(x_raw * 1e9, y_raw * 1e3, linestyle='-', color='black', linewidth=2, label='Signal')
@@ -77,8 +76,10 @@ def plot_fft_lorentzian(paths, file_idx, fft, frequency_bounds, lorentzian_funct
     plt.savefig(save_path, dpi=600)
     plt.close()
     
-def plot_signal_processed(paths, file_idx, signal, max_time, start_time):
-    time, amplitude = signal[:NUM_POINTS, 0], signal[:NUM_POINTS, 1]
+def plot_signal_process(paths, file_idx, signal, max_time, start_time, num_points=None):
+    if num_points is None:
+        num_points = len(signal)
+    time, amplitude = signal[:num_points, 0], signal[:num_points, 1]
     
     plt.figure(figsize=(10, 6))
     plt.plot(time * 1e9, amplitude * 1e3, linestyle='-', color='black', linewidth=2, label='Signal')
@@ -106,13 +107,15 @@ def plot_signal_processed(paths, file_idx, signal, max_time, start_time):
     plt.close()
 
 def plot_combined(paths, file_idx, signal, max_time, start_time, start_idx, functional_function, thermal_function, tgs_popt,
-                 fft, frequency_bounds, lorentzian_function, lorentzian_popt):
+                 fft, frequency_bounds, lorentzian_function, lorentzian_popt, num_points=None):
+    if num_points is None:
+        num_points = len(signal)
     fig = plt.figure(figsize=(15, 6))
     gs = plt.GridSpec(2, 2, width_ratios=[1.5, 1])
     
     ax1 = fig.add_subplot(gs[:, 0])
-    x_raw, y_raw = signal[:NUM_POINTS, 0], signal[:NUM_POINTS, 1]
-    x_fit = signal[start_idx:NUM_POINTS, 0]
+    x_raw, y_raw = signal[:num_points, 0], signal[:num_points, 1]
+    x_fit = signal[start_idx:num_points, 0]
     ax1.plot(x_raw * 1e9, y_raw * 1e3, '-k', linewidth=2, label='Signal')
     ax1.plot(x_fit * 1e9, functional_function(x_fit, *tgs_popt) * 1e3, '-b', linewidth=2, label='Functional Fit')
     ax1.plot(x_fit * 1e9, thermal_function(x_fit, *tgs_popt) * 1e3, '-r', linewidth=2, label='Thermal Fit')
@@ -143,7 +146,7 @@ def plot_combined(paths, file_idx, signal, max_time, start_time, start_idx, func
     ax2.spines['right'].set_visible(False)
     
     ax3 = fig.add_subplot(gs[1, 1])
-    time, amplitude = signal[:NUM_POINTS, 0], signal[:NUM_POINTS, 1]
+    time, amplitude = signal[:num_points, 0], signal[:num_points, 1]
     ax3.plot(time * 1e9, amplitude * 1e3, '-k', linewidth=2, label='Signal')
     y_range = ax3.get_ylim()
     ax3.vlines(max_time * 1e9, y_range[0], y_range[1], color='blue', linestyle='--', linewidth=2, label='Max Time')
@@ -205,13 +208,13 @@ def create_app(signal_data, fit):
         fig = make_subplots(rows=1, cols=1)
         
         fig.add_trace(go.Scatter(
-            x=signal[:NUM_POINTS, 0], 
-            y=signal[:NUM_POINTS, 1], 
+            x=signal[:, 0], 
+            y=signal[:, 1], 
             mode='lines', 
             name='Raw Signal'
         ))
 
-        x_fit = signal[start_idx:NUM_POINTS, 0]
+        x_fit = signal[start_idx:, 0]
         fig.add_trace(go.Scatter(
             x=x_fit,
             y=functional_function(x_fit, *fit_params),
