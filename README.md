@@ -65,3 +65,14 @@ A Python tool for analyzing transient grating spectroscopy (TGS) signals. Proces
 
    Fitting results and figures will be saved in `fit/` and `figures/` directories, respectively.
    You can view example input/output files in the `example/` directory.
+
+## Testing
+
+The package includes tests that validate correctness of the analysis pipeline using synthetic TGS signals. 
+
+To run the tests, use the following command:
+```bash
+pytest tests/test.py -v
+```
+
+To add new tests, create a new folder `test-<number>` in `tests/data/` with a `test-<number>-config.yaml` file and create a new test case in `tests/test.py`.

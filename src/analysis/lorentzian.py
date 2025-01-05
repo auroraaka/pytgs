@@ -25,7 +25,6 @@ def lorentzian_fit(config: dict, paths: Paths, file_idx: int, fft: np.ndarray, s
         frequency_range (List[float], optional): [min, max] frequency bounds for fitting [GHz]
         dc_filter_range (List[int], optional): [start, end] indices for DC filtering
         bimodal_fit (bool, optional): whether to perform bimodal peak fitting
-        plot (bool, optional): whether to plot the fitted signal
 
     Returns:
         Tuple: contains the following elements:

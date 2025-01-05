@@ -14,7 +14,6 @@ def fft(saw_signal: np.ndarray, signal_proportion: float = 0.9, use_derivative: 
         use_derivative (bool, optional): whether to use the derivative of the signal
         noise_cutoff_points (int, optional): number of points zero out at start/end of spectrum to remove noise
         analysis_type (str, optional): whether to output power spectral density ('psd') or fast fourier transform ('fft')
-        plot (bool, optional): whether to plot the transformed signal
         
     Returns:
         transformed_signal (np.ndarray): transformed signal array of shape (M, 2) where:

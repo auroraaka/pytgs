@@ -7,6 +7,7 @@ idxs: null  # indices of files to fit (null for all or list of indices e.g. [1, 
 signal_process:
   heterodyne: di-homodyne  # detection method: 'di-homodyne' or 'mono-homodyne'
   null_point: 2  # null point selection (valid range: 1-4)
+  initial_samples: 50  # number of samples to use for initial sample correction, offset correction, and prominence calculation
   baseline_correction:
     enabled: false  # enable/disable baseline correction (if true, pos and neg must be provided)
     pos: null  # filename for positive reference

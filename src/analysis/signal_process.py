@@ -7,9 +7,7 @@ from src.core.path import Paths
 from src.core.utils import read_data
 from src.core.plots import plot_signal_process
 
-
 PROMINENCE_FACTOR = 5
-INITIAL_SAMPLES = 50
 
 OFFSET_20NS = 19
 END_TIME_20NS = 2e-7
@@ -25,7 +23,7 @@ SMALL_GRATING_START_POINT = 0
 GRATING_SPACING_THRESHOLD = 8
 TIME_OFFSET_INDEX = 20
 
-def find_pump_time(pos_signal: np.ndarray, neg_signal: np.ndarray) -> Tuple[int, float]:
+def find_pump_time(pos_signal: np.ndarray, neg_signal: np.ndarray, initial_samples: int = 50) -> Tuple[int, float]:
     """
     Approximate pump time index by analyzing the signal's second derivative.
 
@@ -36,6 +34,7 @@ def find_pump_time(pos_signal: np.ndarray, neg_signal: np.ndarray) -> Tuple[int,
     Parameters:
         pos_signal (np.ndarray): positive signal array of shape (N, 2) where N is the number of samples
         neg_signal (np.ndarray): negative signal array of shape (N, 2) where N is the number of samples
+        initial_samples (int, optional): number of samples to use for prominence calculation
 
     Returns:
         Tuple[int, float]: (time index, end time)
@@ -54,7 +53,7 @@ def find_pump_time(pos_signal: np.ndarray, neg_signal: np.ndarray) -> Tuple[int,
     second_derivative = np.gradient(first_derivative)
 
     max_second_derivative_idx = np.argmax(second_derivative[:max_time + 1])
-    prominence = PROMINENCE_FACTOR * np.max(second_derivative[:INITIAL_SAMPLES])
+    prominence = PROMINENCE_FACTOR * np.max(second_derivative[:initial_samples])
     peak_idxs, _ = find_peaks(second_derivative[:max_time + 1], prominence=prominence)
 
     if len(peak_idxs) > 0:
@@ -67,11 +66,11 @@ def find_pump_time(pos_signal: np.ndarray, neg_signal: np.ndarray) -> Tuple[int,
     if time_len < 5:
         # 20 ns oscilloscope
         end_time = END_TIME_20NS
-        pump_time_idx = max_second_derivative_idx - OFFSET_20NS
+        pump_time_idx = max(0, max_second_derivative_idx - OFFSET_20NS)
     else:
         # 50 ns oscilloscope
         end_time = END_TIME_50NS
-        pump_time_idx = max_second_derivative_idx - OFFSET_50NS
+        pump_time_idx = max(0, max_second_derivative_idx - OFFSET_50NS)
 
     return pump_time_idx, end_time
 
@@ -168,7 +167,7 @@ def find_start_time(signal: np.ndarray, grating_spacing: float, time_step: float
     return start_idx, start_time
 
 
-def process_signal(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, heterodyne: str = 'di-homodyne', null_point: int = 2, baseline_correction: dict = None) -> Tuple[np.ndarray, float, int, float]:
+def process_signal(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, heterodyne: str = 'di-homodyne', null_point: int = 2, initial_samples: int = 50, baseline_correction: dict = None) -> Tuple[np.ndarray, float, int, float]:
     """
     Process signals for analysis.
 
@@ -184,10 +183,14 @@ def process_signal(config: dict, paths: Paths, file_idx: int, pos_file: str, neg
         neg_file (str): negative signal file path
         grating_spacing (float): grating spacing of TGS probe [µm]
         heterodyne (str, optional): detection scheme.
-            - 'di-homodyne'
+            - 'di-homodyne' (default)
             - 'mono-homodyne'
         null_point (int, optional): null-point start (1-4)
-        plot (bool, optional): whether to plot the processed signal
+        initial_samples (int, optional): number of samples to use for initial sample and offset correction
+        baseline_correction (dict, optional): baseline correction settings
+            - 'enabled' (bool): whether to enable baseline correction
+            - 'pos' (str): positive signal baseline file path
+            - 'neg' (str): negative signal baseline file path
 
     Returns:
         Tuple[np.ndarray, float, int, float]:
@@ -213,16 +216,16 @@ def process_signal(config: dict, paths: Paths, file_idx: int, pos_file: str, neg
         pos[:, 1] -= pos_baseline[:, 1]
         neg[:, 1] -= neg_baseline[:, 1]
 
-    pos[:, 1] -= np.mean(pos[:INITIAL_SAMPLES, 1])
-    neg[:, 1] -= np.mean(neg[:INITIAL_SAMPLES, 1])
+    pos[:, 1] -= np.mean(pos[:initial_samples, 1])
+    neg[:, 1] -= np.mean(neg[:initial_samples, 1])
 
-    pump_time_idx, end_time = find_pump_time(pos, neg)
+    pump_time_idx, end_time = find_pump_time(pos, neg, initial_samples)
     time_step = pos[1, 0] - pos[0, 0]
     end_idx = int(end_time / time_step) - 36
 
     reference_time = neg[pump_time_idx, 0]
     if grating_spacing < GRATING_SPACING_THRESHOLD:
-        offset_correction = np.mean(pos[:INITIAL_SAMPLES, 1] - neg[:INITIAL_SAMPLES, 1])
+        offset_correction = np.mean(pos[:initial_samples, 1] - neg[:initial_samples, 1])
     else:
         offset_correction = 0
 

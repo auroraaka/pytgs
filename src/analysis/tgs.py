@@ -24,7 +24,6 @@ def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: 
         pos_file (str): positive signal file path
         neg_file (str): negative signal file path
         grating_spacing (float): grating spacing of TGS probe [µm]
-        plot (bool, optional): whether to generate plots
 
     Returns:
         Tuple containing:

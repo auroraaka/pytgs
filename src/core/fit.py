@@ -2,6 +2,7 @@ import json
 from typing import Any, List, Tuple
 from dataclasses import dataclass
 from pathlib import Path
+import logging
 
 import pandas as pd
 import numpy as np
@@ -37,6 +38,13 @@ class TGSAnalyzer:
                          for study, max_idx in study_signals.items() 
                          for idx in range(1, max_idx + 1)]
 
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            handler.setFormatter(logging.Formatter('%(message)s'))
+            self.logger.addHandler(handler)
+
     def fit_signal(self, file_idx: int, pos_file: str, neg_file: str) -> Tuple[pd.DataFrame, List[List[float]], List[List[float]]]:
         (start_idx, start_time, grating_spacing, 
          A, A_err, B, B_err, C, C_err, 
@@ -66,7 +74,9 @@ class TGSAnalyzer:
 
         return pd.DataFrame([data]), signal.tolist()
 
-    def fit(self) -> None:
+    def fit(self, show: bool = True) -> None:
+        self.logger.setLevel(logging.INFO if show else logging.WARNING)
+        
         fit_data = pd.DataFrame()
         signals = []
         fails = []
@@ -78,10 +88,10 @@ class TGSAnalyzer:
                          for idx in range(1, max_idx + 1)]
         
         for study_name, i in self.idxs:
-            print(f"Analyzing {study_name} signal {i}")
+            self.logger.info(f"Analyzing {study_name} signal {i}")
             if not (file_prefix := get_file_prefix(self.paths.data_dir, i, study_name)):
                 msg = f"Could not find file prefix for signal {i} in study {study_name}"
-                print(msg)
+                self.logger.warning(msg)
                 fails.append((study_name, i, msg))
                 continue
 
@@ -94,7 +104,7 @@ class TGSAnalyzer:
                 fit_data = pd.concat([fit_data, df], ignore_index=True)
             except Exception as e:
                 msg = f"Error fitting signal {i} from study {study_name}: {str(e)}"
-                print(msg)
+                self.logger.warning(msg)
                 fails.append((study_name, i, msg))
                 continue
 
@@ -102,11 +112,12 @@ class TGSAnalyzer:
         with open(self.paths.signal_path, 'w') as f:
             json.dump(signals, f)
     
-        self.fit_summary(fails)
+        if show:
+            self.fit_summary(fails)
 
     def fit_summary(self, fails: List[Tuple[str, int, str]] = None) -> None:
         if not self.paths.fit_path.exists():
-            print("No fit data found. Please run fit() first.")
+            self.logger.warning("No fit data found. Please run fit() first.")
             return
 
         fit_data = pd.read_csv(self.paths.fit_path)
@@ -116,43 +127,60 @@ class TGSAnalyzer:
         
         summary = []
         for param in param_cols:
-            values = fit_data[param].values
-            param_base = param.split('[')[0]
-            unit = param.split('[')[1]
-            error_col = f"{param_base}_err[{unit}"
-            errors = fit_data[error_col].values
-            weights = 1 / (errors ** 2)
-            weighted_mean = np.average(values, weights=weights)
-            weighted_std = np.sqrt(np.average((values - weighted_mean) ** 2, weights=weights))
-            
-            summary.append({
-                'Parameter': param,
-                'Mean': weighted_mean,
-                'Std': weighted_std,
-                'Min': np.min(values),
-                'Max': np.max(values),
-                'Relative Error (%)': np.mean(errors / np.abs(values)) * 100
-            })
+            try:
+                values = fit_data[param].values
+                param_base = param.split('[')[0]
+                unit = param.split('[')[1]
+                error_col = f"{param_base}_err[{unit}"
+                errors = fit_data[error_col].values
+                
+                weights = 1 / (errors ** 2)
+                if np.all(weights == 0) or np.any(~np.isfinite(weights)):
+                    self.logger.warning(f"Warning: Invalid weights for parameter {param}. Using unweighted statistics.")
+                    weighted_mean = np.mean(values)
+                    weighted_std = np.std(values)
+                else:
+                    weighted_mean = np.average(values, weights=weights)
+                    weighted_std = np.sqrt(np.average((values - weighted_mean) ** 2, weights=weights))
+                
+                summary.append({
+                    'Parameter': param,
+                    'Mean': weighted_mean,
+                    'Std': weighted_std,
+                    'Min': np.min(values),
+                    'Max': np.max(values),
+                    'Relative Error (%)': np.mean(errors / np.abs(values)) * 100 if np.any(values != 0) else np.inf
+                })
+            except Exception as e:
+                self.logger.warning(f"Error processing parameter {param}: {str(e)}")
+                summary.append({
+                    'Parameter': param,
+                    'Mean': np.nan,
+                    'Std': np.nan,
+                    'Min': np.nan,
+                    'Max': np.nan,
+                    'Relative Error (%)': np.nan
+                })
         
         summary_df = pd.DataFrame(summary)
         summary_df = summary_df.set_index('Parameter')
         
-        print("\nFit Summary:")
-        print("-" * 80)
-        print(f"Total signals attempted: {len(fit_data) + len(fails if fails else [])}")
-        print(f"Successful fits: {len(fit_data)}")
-        print(f"Failed fits: {len(fails) if fails else 0}")
+        self.logger.info("\nFit Summary:")
+        self.logger.info("-" * 80)
+        self.logger.info(f"Total signals attempted: {len(fit_data) + len(fails if fails else [])}")
+        self.logger.info(f"Successful fits: {len(fit_data)}")
+        self.logger.info(f"Failed fits: {len(fails) if fails else 0}")
         
         if fails:
-            print("\nFailed Fits:")
+            self.logger.info("\nFailed Fits:")
             for study, idx, error in fails:
-                print(f"- Study: {study}, Signal: {idx}")
-                print(f"  Error: {error}")
+                self.logger.info(f"- Study: {study}, Signal: {idx}")
+                self.logger.info(f"  Error: {error}")
         
         if 'grating_spacing[µm]' in fit_data.columns:
-            print(f"\nGrating spacing: {fit_data['grating_spacing[µm]'].iloc[0]:.4f} µm")
-        print("\nParameter Statistics:")
-        print(summary_df.round(6).to_string())
+            self.logger.info(f"\nGrating spacing: {fit_data['grating_spacing[µm]'].iloc[0]:.4f} µm")
+        self.logger.info("\nParameter Statistics:")
+        self.logger.info(summary_df.round(6).to_string())
         
         summary_path = self.paths.fit_dir / 'summary.txt'
         with open(summary_path, 'w') as f:

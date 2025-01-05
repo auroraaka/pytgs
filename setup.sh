@@ -32,10 +32,15 @@ echo -e "${BLUE}Upgrading pip...${NC}"
 python -m pip install --upgrade pip
 
 echo -e "${BLUE}Installing dependencies...${NC}"
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
-else
+if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
     pip install -e .
+else
+    if [ -f "requirements.txt" ]; then
+        pip install -r requirements.txt
+    else
+        echo "Error: Neither package files (pyproject.toml/setup.py) nor requirements.txt found"
+        exit 1
+    fi
 fi
 
 echo -e "${GREEN}Setup complete! To use the tool:${NC}"
