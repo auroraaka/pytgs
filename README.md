@@ -74,5 +74,3 @@ To run the tests, use the following command:
 ```bash
 pytest tests/test.py -v
 ```
-
-To add new tests, create a new folder `test-<number>` in `tests/data/` with a `test-<number>-config.yaml` file and create a new test case in `tests/test.py`.
