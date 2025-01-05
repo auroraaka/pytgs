@@ -11,8 +11,8 @@ A Python tool for analyzing transient grating spectroscopy (TGS) signals. Proces
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/auroraaka/tgs.git
-   cd tgs
+   git clone https://github.com/auroraaka/pytgs.git
+   cd pytgs
    ```
 
 2. Run the automated setup script:
