@@ -1,15 +1,7 @@
 import matplotlib
 import numpy as np
 
-import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output, State
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from matplotlib import pyplot as plt
-
-from src.analysis.functions import tgs_function
-from src.core.path import Paths
 
 matplotlib.rcParams['font.family'] = 'Times New Roman'
 matplotlib.rcParams['font.sans-serif'] = ['Times New Roman']

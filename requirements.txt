@@ -1,10 +1,7 @@
 pyyaml
 pytest
 
+matplotlib
 numpy
 pandas
 scipy
-
-matplotlib
-plotly
-dash
